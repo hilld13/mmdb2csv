@@ -11,10 +11,13 @@ import (
 
 	"github.com/oschwald/geoip2-golang"
 	"github.com/oschwald/maxminddb-golang"
+	"github.com/dspinhirne/netaddr-go"
 )
 
 // ClickHouse CSV mode
 var clickhouseFlag bool
+var ipv6only bool
+var ipv4only bool
 
 func removeUnsafeChars(strarr []string) []string {
 	var output = []string{}
@@ -118,6 +121,18 @@ func dumpCity(networks *maxminddb.Networks, writer *csv.Writer) (err error) {
 			record.RepresentedCountry.Type,
 		}
 
+        if ( ipv6only || ipv4only ) {
+            //ipnet, err := netaddr.ParseIPv4Net(subnet.String())
+            _, err := netaddr.ParseIPv4Net(subnet.String()) 
+            //ipv4net := net.ParseIP(ipnet.Network().String())
+            if (err == nil && ipv6only) {
+                continue
+            }
+            if (err != nil && ipv4only) {
+                continue
+            }
+        }
+		
 		if len(record.Subdivisions) > 0 {
 			subd := record.Subdivisions[0]
 			values = append(values,
@@ -164,6 +179,19 @@ func dumpConnections(networks *maxminddb.Networks, writer *csv.Writer) (err erro
 			subnet.String(),
 			record.ConnectionType,
 		}
+
+        if ( ipv6only || ipv4only ) {
+            //ipnet, err := netaddr.ParseIPv4Net(subnet.String())
+            _, err := netaddr.ParseIPv4Net(subnet.String()) 
+            //ipv4net := net.ParseIP(ipnet.Network().String())
+            if (err == nil && ipv6only) {
+                continue
+            }
+            if (err != nil && ipv4only) {
+                continue
+            }
+        }
+		
 		if clickhouseFlag {
 			err = writer.Write(removeUnsafeChars(values))
 		} else {
@@ -235,6 +263,19 @@ func dumpCountry(networks *maxminddb.Networks, writer *csv.Writer) (err error) {
 			fmt.Sprintf("%v", record.Traits.IsAnonymousProxy),
 			fmt.Sprintf("%v", record.Traits.IsSatelliteProvider),
 		}
+
+       if ( ipv6only || ipv4only ) {
+            //ipnet, err := netaddr.ParseIPv4Net(subnet.String())
+            _, err := netaddr.ParseIPv4Net(subnet.String()) 
+            //ipv4net := net.ParseIP(ipnet.Network().String())
+            if (err == nil && ipv6only) {
+                continue
+            }
+            if (err != nil && ipv4only) {
+                continue
+            }
+        }
+		
 		if clickhouseFlag {
 			err = writer.Write(removeUnsafeChars(values))
 		} else {
@@ -273,6 +314,19 @@ func dumpISP(networks *maxminddb.Networks, writer *csv.Writer) (err error) {
 			record.ISP,
 			record.Organization,
 		}
+		
+        if ( ipv6only || ipv4only ) {
+            //ipnet, err := netaddr.ParseIPv4Net(subnet.String())
+            _, err := netaddr.ParseIPv4Net(subnet.String()) 
+            //ipv4net := net.ParseIP(ipnet.Network().String())
+            if (err == nil && ipv6only) {
+                continue
+            }
+            if (err != nil && ipv4only) {
+                continue
+            }
+        }
+		
 		if clickhouseFlag {
 			err = writer.Write(removeUnsafeChars(values))
 		} else {
@@ -287,8 +341,15 @@ func dumpISP(networks *maxminddb.Networks, writer *csv.Writer) (err error) {
 
 func main() {
 	flag.BoolVar(&clickhouseFlag, "c", false, "for ClickHouse dictionary")
+    flag.BoolVar(&ipv4only, "4", false, "Parse IPv4 Only")
+    flag.BoolVar(&ipv6only, "6", false, "Parse IPv6 Only")
+    flag.Parse()
 
-	flag.Parse()
+    if ipv4only == true && ipv6only == true {
+        log.Fatal("Which is it? You want to parse IPv6 or IPv4 only? You can't do both.")
+    }
+
+	
 	if flag.NArg() == 0 {
 		log.Fatal("Please provide mmdb path")
 	}
