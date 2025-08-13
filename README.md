@@ -3,6 +3,7 @@
 # What does it do?
 
 Convert Maxmind mmdb database to CSV.
+Adds support to export either ipv4 or ipv6 addresses only
 
 # Why?
 
